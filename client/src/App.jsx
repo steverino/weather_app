@@ -2,69 +2,79 @@ import { useEffect, useRef, useState } from "react";
 import { searchLocations, fetchWeather } from "./api/weatherApi";
 
 function App() {
+  const [city, setCity] = useState("");
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [weather, setWeather] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
 
-  const [city, setCity] = useState("");
-  const [weather, setWeather] = useState(null);
-  const [locations, setLocations] = useState([]);
-  const [selectedLocation, setSelectedLocation] = useState(null);
-
-  const hasWeather = weather !== null;
-  const showEmptyState =
-    hasSearched && !searchLoading && !error && locations.length === 0;
   const searchControllerRef = useRef(null);
   const weatherControllerRef = useRef(null);
 
   useEffect(() => {
     return () => {
-      if (searchControllerRef.current) {
-        searchControllerRef.current.abort();
-      }
-
-      if (weatherControllerRef.current) {
-        weatherControllerRef.current.abort();
-      }
+      searchControllerRef.current?.abort();
+      weatherControllerRef.current?.abort();
     };
   }, []);
+
+  function handleCityChange(event) {
+    searchControllerRef.current?.abort();
+    weatherControllerRef.current?.abort();
+
+    searchControllerRef.current = null;
+    weatherControllerRef.current = null;
+
+    setCity(event.target.value);
+    setLocations([]);
+    setSelectedLocation(null);
+    setWeather(null);
+    setError("");
+    setHasSearched(false);
+    setSearchLoading(false);
+    setWeatherLoading(false);
+  }
 
   async function handleSearch(event) {
     event.preventDefault();
 
     const trimmedCity = city.trim();
 
-    if (trimmedCity === "") {
+    if (!trimmedCity) {
       setError("City is required");
       return;
     }
 
+    searchControllerRef.current?.abort();
+    weatherControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    searchControllerRef.current = controller;
+    weatherControllerRef.current = null;
+
     setSearchLoading(true);
+    setWeatherLoading(false);
     setHasSearched(true);
     setError("");
     setLocations([]);
     setWeather(null);
     setSelectedLocation(null);
 
-    if (searchControllerRef.current) {
-      searchControllerRef.current.abort();
-    }
-
-    const controller = new AbortController();
-
-    searchControllerRef.current = controller;
-
     try {
       const data = await searchLocations(trimmedCity, controller.signal);
 
-      setLocations(data);
-    } catch (error) {
+      if (searchControllerRef.current === controller) {
+        setLocations(data);
+      }
+    } catch (err) {
       if (
-        error.name !== "AbortError" &&
+        err.name !== "AbortError" &&
         searchControllerRef.current === controller
       ) {
-        setError(error.message);
+        setError(err.message);
       }
     } finally {
       if (searchControllerRef.current === controller) {
@@ -75,18 +85,15 @@ function App() {
   }
 
   async function handleGetWeather(location) {
+    weatherControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    weatherControllerRef.current = controller;
+
     setWeatherLoading(true);
     setError("");
     setWeather(null);
     setSelectedLocation(location);
-
-    if (weatherControllerRef.current) {
-      weatherControllerRef.current.abort();
-    }
-
-    const controller = new AbortController();
-
-    weatherControllerRef.current = controller;
 
     try {
       const data = await fetchWeather(
@@ -95,13 +102,15 @@ function App() {
         controller.signal,
       );
 
-      setWeather(data);
-    } catch (error) {
+      if (weatherControllerRef.current === controller) {
+        setWeather(data);
+      }
+    } catch (err) {
       if (
-        error.name !== "AbortError" &&
+        err.name !== "AbortError" &&
         weatherControllerRef.current === controller
       ) {
-        setError(error.message);
+        setError(err.message);
       }
     } finally {
       if (weatherControllerRef.current === controller) {
@@ -111,29 +120,14 @@ function App() {
     }
   }
 
-  function handleCityChange(event) {
-    if (searchControllerRef.current) {
-      searchControllerRef.current.abort();
-      searchControllerRef.current = null;
-    }
-
-    if (weatherControllerRef.current) {
-      weatherControllerRef.current.abort();
-      weatherControllerRef.current = null;
-    }
-
-    setWeatherLoading(false);
-    setSearchLoading(false);
-    setCity(event.target.value);
-    setLocations([]);
-    setWeather(null);
-    setSelectedLocation(null);
-    setError("");
-    setHasSearched(false);
-  }
+  const showEmptyState =
+    hasSearched && !searchLoading && !error && locations.length === 0;
 
   return (
-    <>
+    <main>
+      <h1>Weather Explorer</h1>
+      <p>Search for a city to view its current weather.</p>
+
       <form onSubmit={handleSearch}>
         <label htmlFor="city">City</label>
 
@@ -150,15 +144,19 @@ function App() {
           {searchLoading ? "Searching..." : "Search"}
         </button>
       </form>
+
       {searchLoading && <p>Searching locations...</p>}
-      {weatherLoading && <p>Loading weather...</p>}
+
       {locations.map((location) => (
         <div key={location.id}>
           <p>
-            {location.name}, {location.admin1}, {location.country}
+            {location.name}
+            {location.admin1 ? `, ${location.admin1}` : ""}
+            {`, ${location.country}`}
           </p>
 
           <button
+            type="button"
             onClick={() => handleGetWeather(location)}
             disabled={weatherLoading}
           >
@@ -169,24 +167,29 @@ function App() {
         </div>
       ))}
 
-      {error && <p>{error}</p>}
+      {weatherLoading && <p>Loading weather...</p>}
 
-      {hasWeather && selectedLocation && (
-        <div>
-          <h3>
-            {selectedLocation.name}, {selectedLocation.admin1}
-          </h3>
+      {error && <p role="alert">{error}</p>}
+
+      {weather && selectedLocation && (
+        <section>
+          <h2>
+            {selectedLocation.name}
+            {selectedLocation.admin1 ? `, ${selectedLocation.admin1}` : ""}
+          </h2>
 
           <p>{selectedLocation.country}</p>
 
           <p>
             Temperature:{" "}
-            {(weather.current.temperature_2m * 1.8 + 32).toFixed(1)}°F
+            {(weather.current.temperature_2m * 1.8 + 32).toFixed(1)}
+            °F
           </p>
-        </div>
+        </section>
       )}
+
       {showEmptyState && <p>No locations found.</p>}
-    </>
+    </main>
   );
 }
 
