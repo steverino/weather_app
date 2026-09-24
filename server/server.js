@@ -72,56 +72,67 @@ app.get("/api/locations", async (req, res) => {
 
 // Get current weather using latitude and longitude
 app.get("/api/weather", async (req, res) => {
-  const { latitude, longitude } = req.query;
+  const latitude = Number(req.query.latitude);
+  const longitude = Number(req.query.longitude);
 
   if (
-    latitude === undefined ||
-    longitude === undefined ||
-    latitude === "" ||
-    longitude === ""
+    req.query.latitude == null ||
+    req.query.longitude == null ||
+    req.query.latitude === "" ||
+    req.query.longitude === "" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
   ) {
     return res.status(400).json({
-      error: "Latitude and longitude are required",
-    });
-  }
-
-  const lat = Number(latitude);
-  const lon = Number(longitude);
-
-  if (
-    !Number.isFinite(lat) ||
-    !Number.isFinite(lon) ||
-    lat < -90 ||
-    lat > 90 ||
-    lon < -180 ||
-    lon > 180
-  ) {
-    return res.status(400).json({
-      error: "Invalid latitude or longitude",
+      error: "Valid latitude and longitude are required",
     });
   }
 
   try {
-    const url =
-      "https://api.open-meteo.com/v1/forecast" +
-      `?latitude=${lat}` +
-      `&longitude=${lon}` +
-      "&current=temperature_2m";
+    const url = new URL("https://api.open-meteo.com/v1/forecast");
+
+    url.searchParams.set("latitude", String(latitude));
+    url.searchParams.set("longitude", String(longitude));
+    url.searchParams.set("current", "temperature_2m");
+
+    console.log("Requesting weather:", url.toString());
 
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Weather API returned ${response.status}`);
+      const body = await response.text();
+
+      console.error("Open-Meteo error:", {
+        status: response.status,
+        body,
+      });
+
+      return res.status(502).json({
+        error: "Weather provider returned an error",
+        providerStatus: response.status,
+      });
     }
 
     const data = await response.json();
 
-    res.json(data);
+    if (typeof data?.current?.temperature_2m !== "number") {
+      console.error("Unexpected weather response:", data);
+
+      return res.status(502).json({
+        error: "Weather provider returned invalid data",
+      });
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
     console.error("Weather request failed:", error);
 
-    res.status(500).json({
-      error: "Unable to retrieve weather data",
+    return res.status(502).json({
+      error: "Unable to contact weather provider",
     });
   }
 });
