@@ -137,7 +137,7 @@ app.get("/api/weather", async (req, res) => {
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Weather API running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Weather API listening on ${HOST}:${PORT}`);
   console.log("Allowed CORS origins:", allowedOrigins);
 });
