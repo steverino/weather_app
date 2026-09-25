@@ -11,6 +11,7 @@ const allowedOrigins = [
   "https://weather-app-frontend-g863.onrender.com",
   "http://localhost:5173",
   "http://localhost:4173",
+  "http://192.168.1.159",
 ];
 
 // IMPORTANT: CORS must be configured before the API routes.
