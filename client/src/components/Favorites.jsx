@@ -62,7 +62,7 @@ export default function Favorites({ selectedLocation, onSelectCity }) {
   const alreadySaved = favorites.some(
     (favorite) =>
       selectedLocation &&
-      favorite.city === selectedLocation.city &&
+      favorite.city === selectedLocation.name &&
       favorite.latitude === selectedLocation.latitude &&
       favorite.longitude === selectedLocation.longitude,
   );
