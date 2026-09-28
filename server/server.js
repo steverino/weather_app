@@ -1,11 +1,12 @@
 import { createApp, allowedOrigins } from "./app.js";
+import { getConfig } from "./config.js";
 
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || "0.0.0.0";
+const config = getConfig();
 
 const app = createApp();
 
-app.listen(PORT, HOST, () => {
-  console.log(`Weather API listening on ${HOST}:${PORT}`);
+app.listen(config.port, config.host, () => {
+  console.log(`Weather API listening on ${config.host}:${config.port}`);
+  console.log(`Environment: ${config.nodeEnv}`);
   console.log("Allowed CORS origins:", allowedOrigins);
 });
