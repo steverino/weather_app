@@ -60,4 +60,7 @@ describe("App and Favorites integration", () => {
 
     expect(await screen.findByText("71.6°F")).toBeInTheDocument();
   });
+  it("temporary CI failure test", () => {
+    expect(true).toBe(false);
+  });
 });
