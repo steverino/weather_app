@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import defaultDb from "./db.js";
+import { requestLogger } from "./middleware/requestLogger.js";
+import { requestId } from "./middleware/requestId.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 export const allowedOrigins = [
   "https://weather-app-frontend-g863.onrender.com",
@@ -26,6 +29,8 @@ export function createApp(db = defaultDb) {
   );
 
   app.use(express.json());
+  app.use(requestId);
+  app.use(requestLogger);
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -226,7 +231,7 @@ export function createApp(db = defaultDb) {
       });
     }
   });
-
+  app.use(errorHandler);
   return app;
 }
 
