@@ -7,10 +7,9 @@ import { requestId } from "./middleware/requestId.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 import healthRoutes from "./routes/healthRoutes.js";
-import { createFavoriteRoutes } from "./routes/favoriteRoutes.js";
-
 import locationRoutes from "./routes/locationRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
+import { createFavoriteRoutes } from "./routes/favoriteRoutes.js";
 
 export const allowedOrigins = [
   "https://weather-app-frontend-g863.onrender.com",
@@ -22,7 +21,6 @@ export const allowedOrigins = [
 export function createApp(db = defaultDb) {
   const app = express();
 
-  // CORS
   app.use(
     cors({
       origin(origin, callback) {
@@ -37,22 +35,17 @@ export function createApp(db = defaultDb) {
     }),
   );
 
-  // General middleware
   app.use(express.json());
+
   app.use(requestId);
   app.use(requestLogger);
 
-  // Health check
   app.use("/api/health", healthRoutes);
-
   app.use("/api/locations", locationRoutes);
-
-  // Get current weather using latitude and longitude
   app.use("/api/weather", weatherRoutes);
-  // Favorites
+
   app.use("/api/favorites", createFavoriteRoutes(db));
 
-  // Error-handling middleware must be last
   app.use(errorHandler);
 
   return app;
